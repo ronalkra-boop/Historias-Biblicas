@@ -42,7 +42,7 @@ export function TitleScreen({
   const compact = viewport.isCompactLandscape;
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-y-auto bg-[#1D1510] text-stone-100">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#1D1510] text-stone-100">
       {/* Full-bleed storybook backdrop */}
       <div className="pointer-events-none fixed inset-0 z-0 opacity-75">
         <TitleBackdropSvg />
@@ -50,21 +50,21 @@ export function TitleScreen({
       </div>
 
       <div
-        className={`relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-between pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] ${
+        className={`relative z-10 mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] ${
           compact
-            ? 'gap-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))]'
-            : 'gap-4 py-5 sm:px-6 sm:py-6'
+            ? 'gap-1.5 pt-[max(0.4rem,env(safe-area-inset-top))] pb-[max(0.4rem,env(safe-area-inset-bottom))]'
+            : 'gap-3 py-4 sm:px-6 sm:py-5'
         }`}
       >
-        {/* Header + Testament Tabs + Install/Landscape Actions */}
+        {/* Pinned Header + Testament Tabs + Install Action */}
         <header
-          className={`flex flex-col ${
+          className={`shrink-0 flex flex-col ${
             compact
               ? 'flex-row items-center justify-between gap-2'
-              : 'gap-3 sm:flex-row sm:items-end sm:justify-between'
+              : 'gap-2.5 sm:flex-row sm:items-end sm:justify-between'
           }`}
         >
-          <div className="flex items-center gap-2.5 sm:items-start sm:gap-3">
+          <div className="flex items-center gap-2 sm:items-start sm:gap-3">
             <div className={compact ? 'scale-90 origin-left' : ''}>
               <TitleEmblemSvg />
             </div>
@@ -74,24 +74,24 @@ export function TitleScreen({
               </div>
               <h1
                 className={`font-bold tracking-tight text-amber-50 ${
-                  compact ? 'text-xl leading-tight' : 'mt-0.5 text-3xl sm:text-4xl'
+                  compact ? 'text-lg leading-tight' : 'mt-0.5 text-2xl sm:text-4xl'
                 }`}
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 Historias Bíblicas
               </h1>
               {!compact && (
-                <p className="mt-0.5 text-sm text-stone-200/90">
-                  Elige una historia del Antiguo o Nuevo Testamento para jugar con narración dramatizada.
+                <p className="mt-0.5 text-xs text-stone-200/90 sm:text-sm">
+                  Toca cualquier historia del Antiguo o Nuevo Testamento para empezar a jugar.
                 </p>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-1.5 self-start sm:gap-2 sm:self-auto">
             <PWAInstallButton />
 
-            {viewport.isMobileLike && canFullscreen && !isFullscreen && (
+            {viewport.isMobileLike && viewport.isPortrait && canFullscreen && !isFullscreen && (
               <button
                 type="button"
                 onClick={onRequestLandscape}
@@ -103,7 +103,7 @@ export function TitleScreen({
             )}
 
             <div
-              className="flex items-center gap-1 rounded-xl border border-amber-200/20 bg-stone-950/80 p-1"
+              className="flex items-center gap-1 rounded-xl border border-amber-200/20 bg-stone-950/85 p-1"
               role="tablist"
               aria-label="Filtrar por Testamento"
             >
@@ -122,7 +122,7 @@ export function TitleScreen({
                     role="tab"
                     aria-selected={active}
                     onClick={() => setTab(t.id)}
-                    className={`whitespace-nowrap shrink-0 cursor-pointer rounded-lg px-2.5 py-1 text-xs font-semibold transition sm:px-3 sm:py-1.5 ${
+                    className={`whitespace-nowrap shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-semibold transition sm:px-3 sm:py-1.5 ${
                       active
                         ? 'bg-amber-500 text-stone-950'
                         : 'text-stone-200 hover:bg-stone-800'
@@ -136,107 +136,110 @@ export function TitleScreen({
           </div>
         </header>
 
-        {/* Story Grid: adapts cleanly to portrait mobile, landscape mobile, and desktop */}
-        <div
-          className={`grid ${
-            compact
-              ? 'grid-cols-3 gap-1.5 md:grid-cols-5'
-              : 'grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
-          }`}
-        >
-          {visibleStories.map((item) => {
-            const selected = item.id === selectedStory;
-            const done = progress.completedStories[item.id];
-            const stars = progress.bestStars[item.id] ?? 0;
-            const bestTime = progress.bestTimeSeconds[item.id];
+        {/* Scrollable Story Grid so Header & Play Footer stay visible on every phone screen */}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+          <div
+            className={`grid ${
+              compact
+                ? 'grid-cols-3 gap-1.5 md:grid-cols-5'
+                : 'grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5 sm:gap-3'
+            }`}
+          >
+            {visibleStories.map((item) => {
+              const selected = item.id === selectedStory;
+              const done = progress.completedStories[item.id];
+              const stars = progress.bestStars[item.id] ?? 0;
+              const bestTime = progress.bestTimeSeconds[item.id];
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectStory(item.id)}
-                onDoubleClick={() => onStart(item.id)}
-                className={`group flex cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition sm:rounded-2xl ${
-                  selected
-                    ? 'border-amber-400 bg-stone-900/95 ring-2 ring-amber-400/50'
-                    : 'border-amber-100/15 bg-stone-900/80 hover:border-amber-300/45 hover:bg-stone-900/95'
-                }`}
-              >
-                <div
-                  className={`relative w-full overflow-hidden border-b border-stone-800 ${
-                    compact ? 'h-12' : 'h-24'
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onFocus={() => onSelectStory(item.id)}
+                  onMouseEnter={() => onSelectStory(item.id)}
+                  onClick={() => onStart(item.id)}
+                  className={`group flex cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition sm:rounded-2xl ${
+                    selected
+                      ? 'border-amber-400 bg-stone-900/95 ring-2 ring-amber-400/50'
+                      : 'border-amber-100/20 bg-stone-900/85 hover:border-amber-300/60 hover:bg-stone-900/95'
                   }`}
                 >
-                  <StoryArtwork story={item.id} />
-                  {done && (
-                    <span className="absolute top-1 right-1 inline-flex items-center gap-1 rounded-md bg-emerald-950/85 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Lista
-                    </span>
-                  )}
-                </div>
-
-                <div
-                  className={`flex flex-1 flex-col justify-between ${
-                    compact ? 'p-1.5' : 'p-3'
-                  }`}
-                >
-                  <div>
-                    <div className="truncate text-[10px] font-medium text-amber-300/90 sm:text-[11px]">
-                      {item.testament === 'nuevo' ? 'Nuevo' : 'Antiguo'} · {item.reference}
-                    </div>
-                    <h2
-                      className={`mt-0.5 leading-tight font-bold text-amber-50 ${
-                        compact ? 'truncate text-xs' : 'text-base leading-snug'
-                      }`}
-                      style={{ fontFamily: 'var(--font-display)' }}
-                    >
-                      {item.title}
-                    </h2>
-                    {!compact && (
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-stone-300">
-                        {item.summary}
-                      </p>
+                  <div
+                    className={`relative w-full overflow-hidden border-b border-stone-800 ${
+                      compact ? 'h-11' : 'h-20 sm:h-24'
+                    }`}
+                  >
+                    <StoryArtwork story={item.id} />
+                    {done && (
+                      <span className="absolute top-1 right-1 inline-flex items-center gap-1 rounded-md bg-emerald-950/90 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Lista
+                      </span>
                     )}
                   </div>
 
                   <div
-                    className={`flex items-center justify-between border-t border-stone-800/80 text-[10px] text-stone-300 sm:text-[11px] ${
-                      compact ? 'mt-1 pt-1' : 'mt-2.5 pt-2'
+                    className={`flex flex-1 flex-col justify-between ${
+                      compact ? 'p-1.5' : 'p-2.5 sm:p-3'
                     }`}
                   >
-                    <span className="inline-flex items-center gap-1 tabular-nums">
-                      <Star
-                        className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
-                          stars > 0 ? 'fill-amber-400 text-amber-400' : 'text-stone-500'
+                    <div>
+                      <div className="truncate text-[10px] font-medium text-amber-300 sm:text-[11px]">
+                        {item.testament === 'nuevo' ? 'Nuevo' : 'Antiguo'} · {item.reference}
+                      </div>
+                      <h2
+                        className={`mt-0.5 leading-tight font-bold text-amber-50 ${
+                          compact ? 'truncate text-xs' : 'text-sm leading-snug sm:text-base'
                         }`}
-                      />
-                      {stars}/3
-                    </span>
-                    <span className="tabular-nums text-stone-400">
-                      {bestTime !== null ? `${bestTime}s` : 'Sin tiempo'}
-                    </span>
+                        style={{ fontFamily: 'var(--font-display)' }}
+                      >
+                        {item.title}
+                      </h2>
+                      {!compact && (
+                        <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-stone-300 sm:text-xs">
+                          {item.summary}
+                        </p>
+                      )}
+                    </div>
+
+                    <div
+                      className={`flex items-center justify-between border-t border-stone-800 text-[10px] text-stone-300 sm:text-[11px] ${
+                        compact ? 'mt-1 pt-1' : 'mt-2 pt-1.5'
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-1 tabular-nums">
+                        <Star
+                          className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
+                            stars > 0 ? 'fill-amber-400 text-amber-400' : 'text-stone-500'
+                          }`}
+                        />
+                        {stars}/3
+                      </span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-amber-300">
+                        {bestTime !== null ? `${bestTime}s` : 'Jugar'}
+                        <Play className="h-2.5 w-2.5 fill-current" />
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Action Footer + Flat Control Hint */}
+        {/* Pinned Action Footer */}
         <footer
-          className={`flex items-center justify-between rounded-2xl border border-amber-200/15 bg-stone-950/85 ${
+          className={`shrink-0 flex items-center justify-between rounded-xl border border-amber-200/20 bg-stone-950/90 sm:rounded-2xl ${
             compact
               ? 'flex-row gap-2 px-3 py-1.5'
-              : 'flex-col gap-3 px-4 py-3 sm:flex-row'
+              : 'flex-row gap-2 px-3 py-2 sm:px-4 sm:py-3'
           }`}
         >
-          <div className="text-center text-xs text-stone-300 sm:text-left">
+          <div className="truncate text-left text-[11px] text-stone-300 sm:text-xs">
             {viewport.isMobileLike ? (
               <>
-                <span className="font-semibold text-amber-300">Modo celular:</span>{' '}
-                Controles táctiles en pantalla ·{' '}
-                <span className="text-stone-100">Se abre en horizontal</span>
+                <span className="font-semibold text-amber-300">Toca una historia para jugar</span>{' '}
+                · Controles táctiles en pantalla
               </>
             ) : (
               <>
@@ -253,11 +256,11 @@ export function TitleScreen({
             type="button"
             data-start="true"
             onClick={() => onStart(selectedStory)}
-            className={`whitespace-nowrap shrink-0 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-amber-500 font-bold text-stone-950 transition hover:bg-amber-400 active:scale-[0.98] ${
-              compact ? 'px-4 py-1.5 text-xs' : 'px-5 py-2.5 text-sm'
+            className={`whitespace-nowrap shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-amber-500 font-bold text-stone-950 transition hover:bg-amber-400 active:scale-[0.98] ${
+              compact ? 'px-3.5 py-1.5 text-xs' : 'px-4 py-2 text-xs sm:px-5 sm:py-2.5 sm:text-sm'
             }`}
           >
-            <Play className="h-4 w-4 fill-current" />
+            <Play className="h-3.5 w-3.5 fill-current sm:h-4 sm:w-4" />
             Jugar Historia
           </button>
         </footer>

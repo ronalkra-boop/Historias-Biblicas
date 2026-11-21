@@ -33,6 +33,7 @@ import {
   isFullscreenActive,
   readCurrentViewportLayout,
   requestLandscapeFullscreen,
+  tryLockLandscapeOrientation,
   type ViewportLayoutState,
 } from './utils/orientation';
 
@@ -162,18 +163,24 @@ export default function App() {
     };
   }, []);
 
-  // Check server TTS capability once on mount so missing API keys don't emit 503 console noise
+  // Check server TTS capability once on mount so static deployments (e.g. Vercel) use local Spanish voice immediately without 404 noise
   useEffect(() => {
     let active = true;
     fetch('/api/health')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { ttsConfigured?: boolean } | null) => {
-        if (active && data && typeof data.ttsConfigured === 'boolean') {
-          audioRef.current?.setServerTtsAvailable(data.ttsConfigured);
-        }
+      .then((res) => {
+        if (!res.ok) return null;
+        const ct = res.headers.get('content-type') || '';
+        return ct.includes('application/json') ? res.json() : null;
+      })
+      .then((data: { ok?: boolean; ttsConfigured?: boolean } | null) => {
+        if (!active) return;
+        const configured = Boolean(data && data.ok && data.ttsConfigured === true);
+        audioRef.current?.setServerTtsAvailable(configured);
       })
       .catch(() => {
-        // ignore transient health check failure
+        if (active) {
+          audioRef.current?.setServerTtsAvailable(false);
+        }
       });
     return () => {
       active = false;
@@ -243,8 +250,8 @@ export default function App() {
       if (fromGesture) {
         audioRef.current?.unlock();
         if (viewportRef.current.isMobileLike) {
-          void requestLandscapeFullscreen().then(({ fullscreen }) => {
-            setIsFullscreen(fullscreen);
+          // Lock orientation safely without forcing requestFullscreen() which causes black screens on older EMUI/Android 9 devices
+          void tryLockLandscapeOrientation().then(() => {
             setViewport(readCurrentViewportLayout());
           });
         }
@@ -424,7 +431,15 @@ export default function App() {
     const onVisibilityChange = () => {
       if (document.hidden) {
         onBlur();
+        audioRef.current?.suspend();
+      } else {
+        audioRef.current?.resumeIfUnlocked();
       }
+    };
+
+    const onPageHide = () => {
+      onBlur();
+      audioRef.current?.suspend();
     };
 
     const onFirstPointer = () => {
@@ -434,6 +449,7 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('pagehide', onPageHide);
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pointerdown', onFirstPointer);
 
@@ -441,6 +457,7 @@ export default function App() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
+      window.removeEventListener('pagehide', onPageHide);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pointerdown', onFirstPointer);
     };

@@ -50,6 +50,16 @@ export function readCurrentViewportLayout(): ViewportLayoutState {
   return computeViewportLayout(window.innerWidth, window.innerHeight, hasCoarse, maxTouch);
 }
 
+export function isStandaloneDisplayMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  );
+}
+
 export function isFullscreenActive(): boolean {
   if (typeof document === 'undefined') return false;
   const doc = document as Document & { webkitFullscreenElement?: Element | null };
@@ -58,41 +68,19 @@ export function isFullscreenActive(): boolean {
 
 export function canUseFullscreen(): boolean {
   if (typeof document === 'undefined') return false;
-  const el = document.documentElement as HTMLElement & {
+  // Avoid triggering buggy Chromium/EMUI fullscreen black-screen inside already-standalone PWAs
+  if (isStandaloneDisplayMode()) return false;
+  const target = (document.getElementById('root') || document.body) as HTMLElement & {
     webkitRequestFullscreen?: () => Promise<void> | void;
   };
-  return Boolean(el.requestFullscreen || el.webkitRequestFullscreen);
+  return Boolean(target && (target.requestFullscreen || target.webkitRequestFullscreen));
 }
 
 /**
- * Attempts to enter immersive fullscreen and lock the device screen to horizontal (landscape).
- * Must be called inside a user gesture handler (tap/click) for Android Chrome & WebView support.
- * Gracefully ignores unsupported browsers (e.g., iOS Safari or desktop browsers without lock).
+ * Safely attempts to lock screen orientation to landscape without forcing
+ * documentElement.requestFullscreen (which can render a black screen on older EMUI/Android 9 devices).
  */
-export async function requestLandscapeFullscreen(): Promise<{
-  fullscreen: boolean;
-  locked: boolean;
-}> {
-  let fullscreen = isFullscreenActive();
-  let locked = false;
-
-  try {
-    if (!fullscreen && typeof document !== 'undefined') {
-      const el = document.documentElement as HTMLElement & {
-        webkitRequestFullscreen?: () => Promise<void> | void;
-      };
-      if (typeof el.requestFullscreen === 'function') {
-        await el.requestFullscreen({ navigationUI: 'hide' } as FullscreenOptions);
-        fullscreen = true;
-      } else if (typeof el.webkitRequestFullscreen === 'function') {
-        await el.webkitRequestFullscreen();
-        fullscreen = true;
-      }
-    }
-  } catch {
-    // Fullscreen can be blocked in iframes or unsupported mobile Safari; continue cleanly.
-  }
-
+export async function tryLockLandscapeOrientation(): Promise<boolean> {
   try {
     const orientation = (
       screen as Screen & {
@@ -103,12 +91,48 @@ export async function requestLandscapeFullscreen(): Promise<{
     ).orientation;
     if (orientation && typeof orientation.lock === 'function') {
       await orientation.lock('landscape');
-      locked = true;
+      return true;
     }
   } catch {
-    // Orientation lock is only supported on Android/Chrome fullscreen or installed PWA/TWA.
+    // Orientation lock is only supported in standalone PWA or fullscreen contexts; ignore cleanly.
+  }
+  return false;
+}
+
+/**
+ * Attempts to enter immersive fullscreen (targeting #root, never <html>) and lock to landscape.
+ * Must be triggered by an explicit user tap, never forced automatically inside standalone PWAs.
+ */
+export async function requestLandscapeFullscreen(): Promise<{
+  fullscreen: boolean;
+  locked: boolean;
+}> {
+  let fullscreen = isFullscreenActive();
+
+  // If already running as an installed standalone PWA, only lock orientation without requestFullscreen
+  if (isStandaloneDisplayMode()) {
+    const locked = await tryLockLandscapeOrientation();
+    return { fullscreen, locked };
   }
 
+  try {
+    if (!fullscreen && typeof document !== 'undefined') {
+      const target = (document.getElementById('root') || document.body) as HTMLElement & {
+        webkitRequestFullscreen?: () => Promise<void> | void;
+      };
+      if (target && typeof target.requestFullscreen === 'function') {
+        await target.requestFullscreen({ navigationUI: 'hide' } as FullscreenOptions);
+        fullscreen = true;
+      } else if (target && typeof target.webkitRequestFullscreen === 'function') {
+        await target.webkitRequestFullscreen();
+        fullscreen = true;
+      }
+    }
+  } catch {
+    // Fullscreen can be blocked in iframes or unsupported mobile Safari; continue cleanly.
+  }
+
+  const locked = await tryLockLandscapeOrientation();
   return { fullscreen, locked };
 }
 

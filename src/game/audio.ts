@@ -11,6 +11,8 @@ export interface SpeechCallbacks {
 export interface AudioController {
   unlock(): void;
   isUnlocked(): boolean;
+  suspend(): void;
+  resumeIfUnlocked(): void;
   setMuted(muted: boolean): void;
   isMuted(): boolean;
   setVoiceEnabled(enabled: boolean): void;
@@ -195,7 +197,7 @@ export function createAudioController(): AudioController {
 
   function getMusicTargetVolume(): number {
     if (muted || !musicEnabled || currentTheme === 'none') return 0.0001;
-    return isDucking ? 0.055 : 0.2;
+    return isDucking ? 0.04 : 0.14;
   }
 
   function applyGainLevels() {
@@ -280,14 +282,14 @@ export function createAudioController(): AudioController {
     filter.frequency.value = 460;
 
     padGain = audio.createGain();
-    padGain.gain.value = 0.08;
+    padGain.gain.value = 0.035;
 
     padOscA = audio.createOscillator();
     padOscA.type = 'sine';
     padOscA.frequency.value = freq;
 
     padOscB = audio.createOscillator();
-    padOscB.type = 'triangle';
+    padOscB.type = 'sine';
     padOscB.frequency.value = freq * 1.5;
 
     padOscA.connect(filter);
@@ -539,6 +541,26 @@ export function createAudioController(): AudioController {
     },
     isUnlocked() {
       return unlocked;
+    },
+    suspend() {
+      stopSpeechInternal();
+      if (musicTimerId !== null) {
+        window.clearInterval(musicTimerId);
+        musicTimerId = null;
+      }
+      stopPad();
+      if (ctx && ctx.state === 'running') {
+        ctx.suspend().catch(() => {});
+      }
+    },
+    resumeIfUnlocked() {
+      if (!unlocked || muted) return;
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      if (currentTheme !== 'none' && musicEnabled && musicTimerId === null) {
+        scheduleMusicLoop();
+      }
     },
     setMuted(next: boolean) {
       muted = next;

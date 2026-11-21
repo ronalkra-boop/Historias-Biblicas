@@ -3,6 +3,41 @@
 @theme {
   --font-display: "Fraunces", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+
+  /* Explicit sRGB hex palette overrides for full compatibility with Android 9 / older Chrome (<111) that do not support oklch() */
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-amber-950: #451a03;
+
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+  --color-stone-950: #0c0a09;
+
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-950: #022c22;
+
+  --color-rose-400: #fb7185;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #e11d48;
 }
 
 @layer base {
@@ -11,6 +46,7 @@
   #root {
     width: 100%;
     height: 100%;
+    height: 100vh;
     height: 100dvh;
     margin: 0;
     padding: 0;
@@ -18,12 +54,19 @@
     overscroll-behavior: none;
     font-family: var(--font-sans);
     background-color: #1f1712;
-    color: #231a14;
+    color: #f5f5f4;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     user-select: none;
     touch-action: manipulation;
+  }
+
+  :fullscreen,
+  :-webkit-full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    background-color: #1f1712 !important;
   }
 }
 
