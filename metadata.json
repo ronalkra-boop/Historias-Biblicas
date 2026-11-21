@@ -1,0 +1,6 @@
+{
+  "name": "Crónicas Bíblicas 2D",
+  "description": "Videojuego bíblico 2D ilustrado para niños con 10 historias jugables (5 del Antiguo Testamento y 5 del Nuevo Testamento), música ambiental y voces dramatizadas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
